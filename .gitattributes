@@ -1,0 +1,6 @@
+# LF everywhere, on every platform. Windows runners check out with
+# core.autocrlf=true, which turned every guide page into "# rule-id\r\n":
+# the embedded guide changed bytes by platform, and TestEveryRuleHasAGuide
+# failed on the first Windows CI run. Fixtures carry line numbers that
+# findings are asserted against, so they must not change either.
+* text=auto eol=lf
