@@ -56,6 +56,38 @@ jobs:
           version: "~> v2"
           args: release --snapshot --clean
 
+  # The installer is most people's first contact with legible. It is
+  # shellchecked, then run on both platforms that run it natively against the
+  # latest published release, which proves the script and the release still
+  # agree. The tag is passed in rather than resolved by the script: anonymous
+  # GitHub API calls from shared runners are rate-limited, and a flaky
+  # "latest" lookup would fail this job for reasons that are not the script.
+  install-script:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: shellcheck
+        if: runner.os == 'Linux'
+        run: shellcheck install.sh
+
+      - name: Install the latest release with install.sh
+        run: |
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName)
+          dir="$RUNNER_TEMP/bin"
+          mkdir -p "$dir"
+          sh install.sh --yes --bin-dir "$dir" --version "$tag"
+          # Only the binary: the archive's README.md and LICENSE must not
+          # land in the bin directory.
+          test "$(ls "$dir")" = "legible"
+          "$dir/legible" --version
+
   # legible checking its own fixture, through the binary, the way a user's CI
   # would. The petstore has an error-severity finding, so the default gate
   # must exit 1; exit 2 would mean legible itself failed.

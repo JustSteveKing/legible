@@ -165,6 +165,13 @@ free text, no `maxLength` invented to please a linter.
   a schema reports "free-form" or "untyped" for what is really one broken or
   skipped ref, and when the ref was skipped it blames the spec for the
   network. Check `spec.Ref(n) != ""` after resolving and leave it alone.
+- **`install.sh` has to agree with `.goreleaser.yaml`.** `SUPPORTED_TARGETS`
+  mirrors goos/goarch, and the archive name is rebuilt from the GoReleaser
+  template, so changing either in one place breaks the installer. It
+  extracts only the binary. The archives also hold README.md and LICENSE,
+  and unpacking the whole thing, as the tabstack installer it came from
+  does, leaves both in `/usr/local/bin`. The `install-script` CI job runs it
+  against the latest release, so a mismatch shows up on the next push.
 - **Nothing in the suite touches the network.** Remote refs are tested
   against `httptest` servers. Keep it that way.
 - **Descriptions can be HTML.** Stripe's are. `plain()` strips tags and

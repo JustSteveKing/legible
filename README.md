@@ -40,12 +40,25 @@ URLs, and `--offline` turns that off.
 
 ## Install
 
+**macOS and Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JustSteveKing/legible/main/install.sh | sh
+```
+
+This installs the latest release to `/usr/local/bin`, asking for `sudo` only
+if it has to. It checks the download against the release's `checksums.txt`
+first. `sh -s -- --help` lists the options, including `--version v0.1.0`
+and `--bin-dir ~/.local/bin`.
+
+**Go developers:**
+
 ```bash
 go install github.com/JustSteveKing/legible/cmd/legible@latest
 ```
 
-Or download a binary from the [releases](https://github.com/JustSteveKing/legible/releases).
-Linux, macOS and Windows.
+**Pre-built binaries** for Linux, macOS and Windows, amd64 and arm64, are on
+the [releases page](https://github.com/JustSteveKing/legible/releases).
 
 ## Use
 
