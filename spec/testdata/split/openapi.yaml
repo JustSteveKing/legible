@@ -1,0 +1,27 @@
+# A spec split across files, the way hand-maintained specs usually are.
+# Refs resolve relative to the file they are written in, not to this one:
+# schemas/pet.yaml's "owner.yaml" means schemas/owner.yaml.
+openapi: 3.1.0
+info: { title: Split, version: "1" }
+paths:
+  /pets:
+    post:
+      operationId: createPet
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "schemas/pet.yaml#/Pet" }
+      responses:
+        "422": { $ref: "#/components/responses/Problem" }
+  /owners:
+    get:
+      operationId: listOwners
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "schemas/owner.yaml" }
+components:
+  responses:
+    Problem: { $ref: "responses.yaml#/Problem" }

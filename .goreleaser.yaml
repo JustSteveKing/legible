@@ -1,0 +1,40 @@
+version: 2
+
+project_name: legible
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/legible
+    env:
+      - CGO_ENABLED=0
+    # legible touches no platform-specific APIs, so it ships everywhere Go
+    # does. That is most of the point of being a single binary: it runs on
+    # whatever the CI runner happens to be.
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    # main.version is printed by `legible --version` and recorded in the JSON
+    # and SARIF reports, so a result names the build that produced it.
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

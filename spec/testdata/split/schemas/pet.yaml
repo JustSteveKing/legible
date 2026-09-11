@@ -1,0 +1,9 @@
+Pet:
+  type: object
+  properties:
+    name: { type: string }
+    # Relative to this file's directory: schemas/owner.yaml.
+    owner: { $ref: "owner.yaml" }
+    # Neither of these resolves.
+    missing: { $ref: "nowhere.yaml#/X" }
+    dangling: { $ref: "#/NotHere" }

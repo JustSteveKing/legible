@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # legible claims to run anywhere Go does. Windows is here because line
+    # endings and path separators are exactly what a Linux-only run would
+    # never exercise in a tool that reports file positions.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        if: runner.os != 'Windows'
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  # The release only runs on a tag, which is the worst time to find out the
+  # goreleaser config no longer builds. A snapshot on every push builds all
+  # six targets exactly as a release would, without publishing anything.
+  release-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean
+
+  # legible checking its own fixture, through the binary, the way a user's CI
+  # would. The petstore has an error-severity finding, so the default gate
+  # must exit 1; exit 2 would mean legible itself failed.
+  dogfood:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go build -o legible ./cmd/legible
+      - run: ./legible check rules/testdata/good.yaml --fail-on info --fail-under 100
+      - name: Gate exits 1, not 2
+        run: |
+          set +e
+          ./legible check testdata/petstore.json > /dev/null
+          code=$?
+          if [ "$code" -ne 1 ]; then echo "expected exit 1, got $code"; exit 1; fi

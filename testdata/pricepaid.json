@@ -1,0 +1,3418 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "pricepaid",
+    "version": "04cdcfe-dirty",
+    "description": "HM Land Registry Price Paid Data — every property sale in England and Wales\nsince 1995 — normalised and served from a local SQLite database, enriched with\nONS postcode geography, the English Indices of Deprivation 2019 and the UK\nHouse Price Index.\n\nEvery response is wrapped in `data`, with `meta` where there is a page to\ncontinue. Errors are RFC 9457 problem documents.\n\nIds are strings. They use the full signed 64-bit range, JSON numbers are IEEE\ndoubles in every browser, and an id above 2^53 parsed as a number comes back\nwith its low bits rounded off.\n\nEnrichment is optional. Against a database that has not been enriched, the\n`area` object is absent, filters on it match nothing, and `real_terms` yields\nno adjusted price. GET /health reports what is loaded.",
+    "license": {
+      "name": "Open Government Licence v3.0",
+      "url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "This server"
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "transactions",
+      "description": "Individual sales"
+    },
+    {
+      "name": "properties",
+      "description": "Addresses, and their price history"
+    },
+    {
+      "name": "statistics",
+      "description": "Aggregates over a filtered set of sales"
+    },
+    {
+      "name": "geography",
+      "description": "Browsing the place hierarchy"
+    },
+    {
+      "name": "reference",
+      "description": "Code lists"
+    },
+    {
+      "name": "service",
+      "description": "Operational endpoints"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Row counts, and whether the database is usable",
+        "description": "Returns 503 while the database is empty: reachable but useless is not\nsomething a load balancer should send traffic to.",
+        "tags": [
+          "service"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "openapi",
+        "summary": "This document",
+        "description": "Generated from the same route table the router is built from, so it\ncannot describe an endpoint that does not exist or miss one that does.",
+        "tags": [
+          "service"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": [
+                    "object"
+                  ],
+                  "description": "An OpenAPI 3.1 document"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/areas/{area}/outcodes": {
+      "get": {
+        "operationId": "listOutcodes",
+        "summary": "Outward codes in a postcode area, with address counts",
+        "description": "A drill-down that follows postcodes rather than administrative\nboundaries, which is often how people actually think about where somewhere is.",
+        "tags": [
+          "geography"
+        ],
+        "parameters": [
+          {
+            "name": "area",
+            "in": "path",
+            "description": "Postcode area, e.g. NW",
+            "required": true,
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "description": "The letters at the start of an outcode",
+              "pattern": "^[A-Za-z]{1,2}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutcodeList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not an integer, or the query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/counties": {
+      "get": {
+        "operationId": "listCounties",
+        "summary": "Every county",
+        "description": "The top of the place hierarchy, and the entry point for browsing it:\neach county leads to its districts, each district to its towns.\n\nCounties are as Land Registry records them, which means unitary authorities\nappear alongside historic counties — \"WREKIN\" and \"SURREY\" are both here.",
+        "tags": [
+          "geography"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/counties/{id}/districts": {
+      "get": {
+        "operationId": "listDistricts",
+        "summary": "Districts within a county",
+        "description": "Returns 404 for an unknown county, and for a county with no districts —\nwhich cannot happen in loaded data, since a district is what creates its\ncounty in the first place.",
+        "tags": [
+          "geography"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "County id",
+            "required": true,
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not an integer, or the query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/districts/{id}/towns": {
+      "get": {
+        "operationId": "listTowns",
+        "summary": "Towns within a district",
+        "description": "The same town name can appear under two districts. That is the source's\nmeaning rather than a duplicate: LONDON in Brent and LONDON in Hackney are\ndifferent places, and they get different ids.",
+        "tags": [
+          "geography"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "District id",
+            "required": true,
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not an integer, or the query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/properties": {
+      "get": {
+        "operationId": "listProperties",
+        "summary": "Addresses",
+        "description": "With q, this is a prefix search over street and town names — a prefix,\nnot a substring, because LIKE 'FOO%' can use the name indexes and LIKE '%FOO%'\nwould scan a million street names. q takes over from the other filters rather\nthan combining with them.",
+        "tags": [
+          "properties"
+        ],
+        "parameters": [
+          {
+            "name": "county",
+            "in": "query",
+            "description": "County name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "description": "District name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "town",
+            "in": "query",
+            "description": "Town name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "street",
+            "in": "query",
+            "description": "Street name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "locality",
+            "in": "query",
+            "description": "Locality name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "postcode",
+            "in": "query",
+            "description": "Full postcode. Canonicalised, so \"nw100dy\" matches",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "outcode",
+            "in": "query",
+            "description": "Outward code, e.g. NW10",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}[0-9][A-Za-z0-9]?$"
+            }
+          },
+          {
+            "name": "area",
+            "in": "query",
+            "description": "Postcode area, e.g. NW",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}$"
+            }
+          },
+          {
+            "name": "county_id",
+            "in": "query",
+            "description": "County id, from /v1/counties",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "district_id",
+            "in": "query",
+            "description": "District id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "town_id",
+            "in": "query",
+            "description": "Town id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "lsoa",
+            "in": "query",
+            "description": "Lower Layer Super Output Area, 2011 census. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "ONS region code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "ONS country code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Prefix-match street and town names",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Results per page",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "default": 50,
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Continue from a previous page",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/properties/{id}": {
+      "get": {
+        "operationId": "getProperty",
+        "summary": "One address with its full price history",
+        "description": "The query the normalised schema exists for. Without a properties table\nthe same question is a self-join on five text columns.\n\nSales are newest first and omit their property, since it is the enclosing\nobject.",
+        "tags": [
+          "properties"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Property id, as returned elsewhere",
+            "required": true,
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not an integer, or the query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reference/categories": {
+      "get": {
+        "operationId": "referenceCategories",
+        "summary": "PPD category codes and labels",
+        "description": "A is a standard price paid: a sale for value at full market price. B is an\nadditional price paid — repossessions, buy-to-lets, transfers to a non-private\nindividual. Filter to category A for anything meant to represent the open\nmarket.",
+        "tags": [
+          "reference"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reference/property-types": {
+      "get": {
+        "operationId": "referencePropertyTypes",
+        "summary": "Property type codes and labels",
+        "description": "D detached, S semi-detached, T terraced, F flat or maisonette, O other.\nServed from the database rather than hardcoded, so a client never has to know\nthat F means flat in this column and freehold in another.",
+        "tags": [
+          "reference"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reference/tenures": {
+      "get": {
+        "operationId": "referenceTenures",
+        "summary": "Tenure codes and labels",
+        "description": "F freehold, L leasehold, U unknown. Land Registry does not record leases\nof seven years or less.",
+        "tags": [
+          "reference"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stats/breakdown": {
+      "get": {
+        "operationId": "statsBreakdown",
+        "summary": "The filtered set grouped by one dimension",
+        "description": "Grouping by imd_decile needs the deprivation dataset loaded. Sales it\ndoes not cover — everything in Wales, which has its own incompatible index —\ncome back under an empty key labelled \"Not covered\".",
+        "tags": [
+          "statistics"
+        ],
+        "parameters": [
+          {
+            "name": "county",
+            "in": "query",
+            "description": "County name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "description": "District name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "town",
+            "in": "query",
+            "description": "Town name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "street",
+            "in": "query",
+            "description": "Street name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "locality",
+            "in": "query",
+            "description": "Locality name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "postcode",
+            "in": "query",
+            "description": "Full postcode. Canonicalised, so \"nw100dy\" matches",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "outcode",
+            "in": "query",
+            "description": "Outward code, e.g. NW10",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}[0-9][A-Za-z0-9]?$"
+            }
+          },
+          {
+            "name": "area",
+            "in": "query",
+            "description": "Postcode area, e.g. NW",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}$"
+            }
+          },
+          {
+            "name": "county_id",
+            "in": "query",
+            "description": "County id, from /v1/counties",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "district_id",
+            "in": "query",
+            "description": "District id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "town_id",
+            "in": "query",
+            "description": "Town id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "lsoa",
+            "in": "query",
+            "description": "Lower Layer Super Output Area, 2011 census. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "ONS region code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "ONS country code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "property_id",
+            "in": "query",
+            "description": "Restrict to one address",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "property_type",
+            "in": "query",
+            "description": "Property type code, from /v1/reference/property-types. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "D",
+                  "S",
+                  "T",
+                  "F",
+                  "O"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "tenure",
+            "in": "query",
+            "description": "Tenure code, from /v1/reference/tenures. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "F",
+                  "L",
+                  "U"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "PPD category. A is a standard sale, B an additional one such as a repossession. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "A",
+                  "B"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "imd_decile",
+            "in": "query",
+            "description": "Deprivation decile, 1 being the most deprived tenth of England. Needs the deprivation dataset. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "integer"
+                ],
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "new_build",
+            "in": "query",
+            "description": "Whether the sale was of a new build",
+            "schema": {
+              "type": [
+                "boolean"
+              ]
+            }
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "description": "Lowest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "description": "Highest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Earliest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the start of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Latest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the end of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "description": "Dimension to group by",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "enum": [
+                "property_type",
+                "tenure",
+                "county",
+                "town",
+                "imd_decile"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum groups returned",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "default": 50,
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BreakdownEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stats/summary": {
+      "get": {
+        "operationId": "statsSummary",
+        "summary": "Count, range, mean and quartiles for a filtered set",
+        "description": "Quartiles sit alongside the mean because for house prices the two\ndisagree usefully: a handful of eight-figure sales pull the mean well above\nwhat anyone actually paid, and the gap is itself the interesting number.",
+        "tags": [
+          "statistics"
+        ],
+        "parameters": [
+          {
+            "name": "county",
+            "in": "query",
+            "description": "County name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "description": "District name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "town",
+            "in": "query",
+            "description": "Town name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "street",
+            "in": "query",
+            "description": "Street name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "locality",
+            "in": "query",
+            "description": "Locality name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "postcode",
+            "in": "query",
+            "description": "Full postcode. Canonicalised, so \"nw100dy\" matches",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "outcode",
+            "in": "query",
+            "description": "Outward code, e.g. NW10",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}[0-9][A-Za-z0-9]?$"
+            }
+          },
+          {
+            "name": "area",
+            "in": "query",
+            "description": "Postcode area, e.g. NW",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}$"
+            }
+          },
+          {
+            "name": "county_id",
+            "in": "query",
+            "description": "County id, from /v1/counties",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "district_id",
+            "in": "query",
+            "description": "District id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "town_id",
+            "in": "query",
+            "description": "Town id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "lsoa",
+            "in": "query",
+            "description": "Lower Layer Super Output Area, 2011 census. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "ONS region code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "ONS country code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "property_id",
+            "in": "query",
+            "description": "Restrict to one address",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "property_type",
+            "in": "query",
+            "description": "Property type code, from /v1/reference/property-types. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "D",
+                  "S",
+                  "T",
+                  "F",
+                  "O"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "tenure",
+            "in": "query",
+            "description": "Tenure code, from /v1/reference/tenures. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "F",
+                  "L",
+                  "U"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "PPD category. A is a standard sale, B an additional one such as a repossession. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "A",
+                  "B"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "imd_decile",
+            "in": "query",
+            "description": "Deprivation decile, 1 being the most deprived tenth of England. Needs the deprivation dataset. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "integer"
+                ],
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "new_build",
+            "in": "query",
+            "description": "Whether the sale was of a new build",
+            "schema": {
+              "type": [
+                "boolean"
+              ]
+            }
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "description": "Lowest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "description": "Highest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Earliest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the start of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Latest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the end of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "real_terms",
+            "in": "query",
+            "description": "Restate prices in the money of the price index's latest month, using the property's own local authority. Needs the geography and hpi datasets; sales the index cannot cover are excluded",
+            "schema": {
+              "type": [
+                "boolean"
+              ],
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stats/timeseries": {
+      "get": {
+        "operationId": "statsTimeseries",
+        "summary": "The filtered set bucketed by month or year",
+        "description": "Over a series spanning thirty-one years, real_terms is usually the\nversion worth looking at: without it the line is measuring inflation as much as\nhousing.",
+        "tags": [
+          "statistics"
+        ],
+        "parameters": [
+          {
+            "name": "county",
+            "in": "query",
+            "description": "County name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "description": "District name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "town",
+            "in": "query",
+            "description": "Town name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "street",
+            "in": "query",
+            "description": "Street name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "locality",
+            "in": "query",
+            "description": "Locality name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "postcode",
+            "in": "query",
+            "description": "Full postcode. Canonicalised, so \"nw100dy\" matches",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "outcode",
+            "in": "query",
+            "description": "Outward code, e.g. NW10",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}[0-9][A-Za-z0-9]?$"
+            }
+          },
+          {
+            "name": "area",
+            "in": "query",
+            "description": "Postcode area, e.g. NW",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}$"
+            }
+          },
+          {
+            "name": "county_id",
+            "in": "query",
+            "description": "County id, from /v1/counties",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "district_id",
+            "in": "query",
+            "description": "District id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "town_id",
+            "in": "query",
+            "description": "Town id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "lsoa",
+            "in": "query",
+            "description": "Lower Layer Super Output Area, 2011 census. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "ONS region code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "ONS country code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "property_id",
+            "in": "query",
+            "description": "Restrict to one address",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "property_type",
+            "in": "query",
+            "description": "Property type code, from /v1/reference/property-types. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "D",
+                  "S",
+                  "T",
+                  "F",
+                  "O"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "tenure",
+            "in": "query",
+            "description": "Tenure code, from /v1/reference/tenures. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "F",
+                  "L",
+                  "U"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "PPD category. A is a standard sale, B an additional one such as a repossession. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "A",
+                  "B"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "imd_decile",
+            "in": "query",
+            "description": "Deprivation decile, 1 being the most deprived tenth of England. Needs the deprivation dataset. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "integer"
+                ],
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "new_build",
+            "in": "query",
+            "description": "Whether the sale was of a new build",
+            "schema": {
+              "type": [
+                "boolean"
+              ]
+            }
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "description": "Lowest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "description": "Highest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Earliest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the start of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Latest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the end of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "description": "Bucket width",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "enum": [
+                "month",
+                "year"
+              ],
+              "default": "month"
+            }
+          },
+          {
+            "name": "real_terms",
+            "in": "query",
+            "description": "Restate prices in the money of the price index's latest month, using the property's own local authority. Needs the geography and hpi datasets; sales the index cannot cover are excluded",
+            "schema": {
+              "type": [
+                "boolean"
+              ],
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeseriesEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/towns/{id}": {
+      "get": {
+        "operationId": "getTown",
+        "summary": "One town, with its district and county",
+        "description": "Ancestors are resolved so that arriving here from a transaction does not\ncost three more requests to find out where it is.",
+        "tags": [
+          "geography"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Town id",
+            "required": true,
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TownEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not an integer, or the query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transactions": {
+      "get": {
+        "operationId": "listTransactions",
+        "summary": "Filtered, sorted, cursor-paginated sales",
+        "description": "Every sale carries its fully resolved address, and its area when the\ngeography dataset is loaded.\n\nPagination is by cursor rather than offset, because OFFSET makes SQLite walk\nand discard every skipped row: on 30M rows the ten-thousandth page would take\nseconds. Follow meta.next_cursor. The cost is that pages cannot be jumped to\nout of order.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "county",
+            "in": "query",
+            "description": "County name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "description": "District name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "town",
+            "in": "query",
+            "description": "Town name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "street",
+            "in": "query",
+            "description": "Street name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "locality",
+            "in": "query",
+            "description": "Locality name, case-insensitive",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "postcode",
+            "in": "query",
+            "description": "Full postcode. Canonicalised, so \"nw100dy\" matches",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "outcode",
+            "in": "query",
+            "description": "Outward code, e.g. NW10",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}[0-9][A-Za-z0-9]?$"
+            }
+          },
+          {
+            "name": "area",
+            "in": "query",
+            "description": "Postcode area, e.g. NW",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[A-Za-z]{1,2}$"
+            }
+          },
+          {
+            "name": "county_id",
+            "in": "query",
+            "description": "County id, from /v1/counties",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "district_id",
+            "in": "query",
+            "description": "District id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "town_id",
+            "in": "query",
+            "description": "Town id",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "lsoa",
+            "in": "query",
+            "description": "Lower Layer Super Output Area, 2011 census. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "ONS region code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "ONS country code. Needs the geography dataset",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "property_id",
+            "in": "query",
+            "description": "Restrict to one address",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^-?[0-9]+$"
+            }
+          },
+          {
+            "name": "property_type",
+            "in": "query",
+            "description": "Property type code, from /v1/reference/property-types. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "D",
+                  "S",
+                  "T",
+                  "F",
+                  "O"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "tenure",
+            "in": "query",
+            "description": "Tenure code, from /v1/reference/tenures. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "F",
+                  "L",
+                  "U"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "PPD category. A is a standard sale, B an additional one such as a repossession. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "string"
+                ],
+                "enum": [
+                  "A",
+                  "B"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "imd_decile",
+            "in": "query",
+            "description": "Deprivation decile, 1 being the most deprived tenth of England. Needs the deprivation dataset. Repeatable, or comma-separated",
+            "schema": {
+              "type": [
+                "array"
+              ],
+              "items": {
+                "type": [
+                  "integer"
+                ],
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "new_build",
+            "in": "query",
+            "description": "Whether the sale was of a new build",
+            "schema": {
+              "type": [
+                "boolean"
+              ]
+            }
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "description": "Lowest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "description": "Highest price in pounds, inclusive",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Earliest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the start of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Latest date of transfer. YYYY, YYYY-MM or YYYY-MM-DD, widened to the end of the period",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Ordering key",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "enum": [
+                "date",
+                "price"
+              ],
+              "default": "date"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "Ordering direction",
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Results per page",
+            "schema": {
+              "type": [
+                "integer"
+              ],
+              "default": 50,
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque token from a previous response's meta.next_cursor",
+            "schema": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "real_terms",
+            "in": "query",
+            "description": "Restate prices in the money of the price index's latest month, using the property's own local authority. Needs the geography and hpi datasets; sales the index cannot cover are excluded",
+            "schema": {
+              "type": [
+                "boolean"
+              ],
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/transactions/{id}": {
+      "get": {
+        "operationId": "getTransaction",
+        "summary": "One sale by its Land Registry identifier",
+        "description": "The identifier is Land Registry's own GUID with its braces stripped. It is\nstable across monthly publications, which is what lets a correction find the\nrow it corrects.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The transaction unique identifier, without braces",
+            "required": true,
+            "schema": {
+              "type": [
+                "string"
+              ],
+              "pattern": "^[0-9A-Fa-f-]{36}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The id is not an integer, or the query could not be understood",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The request could not be completed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Area": {
+        "type": [
+          "object"
+        ],
+        "description": "Where a property is, from the ONS Postcode Directory. Omitted entirely when the geography dataset has not been loaded.",
+        "properties": {
+          "country": {
+            "type": [
+              "string"
+            ],
+            "description": "ONS country code",
+            "example": "E92000001"
+          },
+          "deprivation": {
+            "$ref": "#/components/schemas/Deprivation"
+          },
+          "lad_code": {
+            "type": [
+              "string"
+            ],
+            "description": "Local authority district code, e.g. E09000005. What the price index is keyed on",
+            "example": "E08000017"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "example": 53.435409
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "example": -1.110454
+          },
+          "lsoa11": {
+            "type": [
+              "string"
+            ],
+            "description": "Lower Layer Super Output Area, 2011 census. Named for its vintage because boundaries were redrawn for 2021 and the codes do not correspond; this is the one deprivation data is published against",
+            "example": "E01007612"
+          },
+          "lsoa21": {
+            "type": [
+              "string"
+            ],
+            "description": "Lower Layer Super Output Area, 2021 census",
+            "example": "E01007612"
+          },
+          "region": {
+            "type": [
+              "string"
+            ],
+            "description": "ONS region code",
+            "example": "E12000003"
+          }
+        }
+      },
+      "BreakdownEnvelope": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Group"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Bucket": {
+        "type": [
+          "object"
+        ],
+        "description": "One interval of a time series.",
+        "properties": {
+          "count": {
+            "type": [
+              "integer"
+            ],
+            "minimum": 0
+          },
+          "max_price": {
+            "type": [
+              "integer"
+            ]
+          },
+          "mean_price": {
+            "type": [
+              "integer"
+            ]
+          },
+          "min_price": {
+            "type": [
+              "integer"
+            ],
+            "minimum": 0
+          },
+          "period": {
+            "type": [
+              "string"
+            ],
+            "description": "YYYY-MM or YYYY, depending on interval",
+            "pattern": "^[0-9]{4}(-[0-9]{2})?$",
+            "example": "2026-04"
+          }
+        },
+        "required": [
+          "period",
+          "count",
+          "min_price",
+          "max_price",
+          "mean_price"
+        ]
+      },
+      "Code": {
+        "type": [
+          "object"
+        ],
+        "description": "A reference-data value with its label, so nothing has to hardcode that F means flat in one column and freehold in another.",
+        "properties": {
+          "code": {
+            "type": [
+              "string"
+            ],
+            "description": "The single-character source code",
+            "pattern": "^[A-Z]$",
+            "example": "T"
+          },
+          "label": {
+            "type": [
+              "string"
+            ],
+            "description": "Human-readable name",
+            "example": "Terraced"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ]
+      },
+      "CodeList": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Code"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Deprivation": {
+        "type": [
+          "object"
+        ],
+        "description": "Standing in the English Indices of Deprivation 2019. Every decile runs 1 (most deprived tenth of England) to 10. Absent outside England: Wales publishes its own index on an incompatible basis, so no row is better than a wrong one.",
+        "properties": {
+          "barriers_decile": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Barriers to housing and services"
+          },
+          "crime_decile": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "education_decile": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "employment_decile": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "environment_decile": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Living environment"
+          },
+          "health_decile": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "imd_decile": {
+            "type": [
+              "integer"
+            ],
+            "description": "Overall deprivation decile, 1 being the most deprived tenth of England",
+            "minimum": 1,
+            "maximum": 10,
+            "example": 8
+          },
+          "imd_rank": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Overall rank, 1 being most deprived of 32,844",
+            "minimum": 1,
+            "example": 25358
+          },
+          "income_decile": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "Group": {
+        "type": [
+          "object"
+        ],
+        "description": "One row of a breakdown.",
+        "properties": {
+          "count": {
+            "type": [
+              "integer"
+            ]
+          },
+          "key": {
+            "type": [
+              "string"
+            ],
+            "description": "The grouping value. Empty where the dimension does not cover the rows, e.g. deprivation outside England"
+          },
+          "label": {
+            "type": [
+              "string"
+            ],
+            "description": "Human-readable form, where the key is a code"
+          },
+          "max_price": {
+            "type": [
+              "integer"
+            ]
+          },
+          "mean_price": {
+            "type": [
+              "integer"
+            ]
+          },
+          "min_price": {
+            "type": [
+              "integer"
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "count",
+          "min_price",
+          "max_price",
+          "mean_price"
+        ]
+      },
+      "Health": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "rows": {
+            "type": [
+              "object"
+            ],
+            "description": "Row count per table"
+          },
+          "status": {
+            "type": [
+              "string"
+            ],
+            "enum": [
+              "ok",
+              "empty"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "rows"
+        ]
+      },
+      "Meta": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "count": {
+            "type": [
+              "integer"
+            ],
+            "description": "Rows in this page",
+            "minimum": 0,
+            "example": 50
+          },
+          "next_cursor": {
+            "type": [
+              "string"
+            ],
+            "description": "Pass as ?cursor= for the next page. Absent on the last one",
+            "example": "MjAyNi0wNy0zMR81ODM0RTRFOA"
+          }
+        },
+        "required": [
+          "count"
+        ]
+      },
+      "OutcodeCount": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "outcode": {
+            "type": [
+              "string"
+            ],
+            "example": "DN11"
+          },
+          "properties": {
+            "type": [
+              "integer"
+            ],
+            "description": "Addresses in this outward code",
+            "minimum": 0,
+            "example": 447
+          }
+        },
+        "required": [
+          "outcode",
+          "properties"
+        ]
+      },
+      "OutcodeList": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/OutcodeCount"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Place": {
+        "type": [
+          "object"
+        ],
+        "description": "A named row in the county/district/town hierarchy.",
+        "properties": {
+          "id": {
+            "type": [
+              "string"
+            ],
+            "description": "Content-hash id, as a string because it exceeds 2^53",
+            "pattern": "^-?[0-9]+$",
+            "example": "6107518865024887320"
+          },
+          "name": {
+            "type": [
+              "string"
+            ],
+            "description": "As Land Registry records it, in upper case",
+            "example": "DONCASTER"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "PlaceList": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Place"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PostcodeRef": {
+        "type": [
+          "object"
+        ],
+        "description": "A postcode with the parts derived at load time, so area queries are an index lookup rather than substr() over 30M rows.",
+        "properties": {
+          "area": {
+            "type": [
+              "string"
+            ],
+            "description": "The leading letters, e.g. NW",
+            "example": "DN"
+          },
+          "incode": {
+            "type": [
+              "string"
+            ],
+            "description": "The three characters after it",
+            "example": "9HZ"
+          },
+          "outcode": {
+            "type": [
+              "string"
+            ],
+            "description": "The part before the space, e.g. NW10",
+            "example": "DN11"
+          },
+          "postcode": {
+            "type": [
+              "string"
+            ],
+            "description": "Canonical form, single-spaced",
+            "pattern": "^[A-Z]{1,2}[0-9][A-Z0-9]? [0-9][A-Z]{2}$",
+            "example": "DN11 9HZ"
+          }
+        },
+        "required": [
+          "postcode",
+          "outcode",
+          "incode",
+          "area"
+        ]
+      },
+      "Problem": {
+        "type": [
+          "object"
+        ],
+        "description": "An RFC 9457 problem document. Errors are served as application/problem+json so that a client can tell one 404 from another by its type rather than by parsing prose.",
+        "properties": {
+          "detail": {
+            "type": [
+              "string"
+            ],
+            "description": "What went wrong with this particular request"
+          },
+          "instance": {
+            "type": [
+              "string"
+            ],
+            "description": "The path that produced it"
+          },
+          "status": {
+            "type": [
+              "integer"
+            ],
+            "description": "The HTTP status code",
+            "minimum": 100
+          },
+          "title": {
+            "type": [
+              "string"
+            ],
+            "description": "A short, stable summary"
+          },
+          "type": {
+            "type": [
+              "string"
+            ],
+            "description": "A relative reference identifying the kind of problem, e.g. /problems/invalid-query"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status"
+        ]
+      },
+      "Property": {
+        "type": [
+          "object"
+        ],
+        "description": "An address: everything that distinguishes one dwelling from another. The same property links all of its sales.",
+        "properties": {
+          "area": {
+            "$ref": "#/components/schemas/Area"
+          },
+          "county": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "district": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "id": {
+            "type": [
+              "string"
+            ],
+            "description": "Content-hash id, as a string"
+          },
+          "locality": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paon": {
+            "type": [
+              "string"
+            ],
+            "description": "Primary addressable object name — the house number or name",
+            "example": "61"
+          },
+          "postcode": {
+            "$ref": "#/components/schemas/PostcodeRef"
+          },
+          "saon": {
+            "type": [
+              "string"
+            ],
+            "description": "Secondary addressable object name, e.g. a flat within a building",
+            "example": "FLAT 2"
+          },
+          "street": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent on some source rows",
+            "example": "NORTHGATE"
+          },
+          "town": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "transactions": {
+            "type": [
+              "array"
+            ],
+            "description": "Every sale at this address, newest first. Returned only by the single-property endpoint",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "paon",
+          "town",
+          "district",
+          "county"
+        ]
+      },
+      "PropertyEnvelope": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Property"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PropertyList": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Summary": {
+        "type": [
+          "object"
+        ],
+        "description": "Aggregates over a filtered set. The mean and the median disagree usefully for house prices; both are given.",
+        "properties": {
+          "count": {
+            "type": [
+              "integer"
+            ],
+            "minimum": 0,
+            "example": 23609
+          },
+          "first_sale": {
+            "type": [
+              "string"
+            ],
+            "description": "Earliest date of transfer in the set"
+          },
+          "last_sale": {
+            "type": [
+              "string"
+            ],
+            "description": "Latest date of transfer in the set"
+          },
+          "max_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 4950000
+          },
+          "mean_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 181283
+          },
+          "median_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 146000
+          },
+          "min_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "example": 5000
+          },
+          "p25_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Lower quartile"
+          },
+          "p75_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Upper quartile"
+          },
+          "real_price_basis": {
+            "type": [
+              "string"
+            ],
+            "description": "The month they are adjusted to, when they are"
+          },
+          "real_terms": {
+            "type": [
+              "boolean"
+            ],
+            "description": "Whether the figures are inflation-adjusted"
+          }
+        },
+        "required": [
+          "count",
+          "real_terms"
+        ]
+      },
+      "SummaryEnvelope": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Summary"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TimeseriesEnvelope": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Bucket"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TownDetail": {
+        "type": [
+          "object"
+        ],
+        "description": "A town with its ancestors resolved, so arriving by id does not cost three more requests.",
+        "properties": {
+          "county": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "district": {
+            "$ref": "#/components/schemas/Place"
+          },
+          "id": {
+            "type": [
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "district",
+          "county"
+        ]
+      },
+      "TownEnvelope": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TownDetail"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "Transaction": {
+        "type": [
+          "object"
+        ],
+        "description": "One sale. Property type and tenure sit here rather than on the property because the source reports them per sale and does not always agree with itself.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/Code",
+            "description": "A is a standard price paid, B an additional one such as a repossession or buy-to-let"
+          },
+          "id": {
+            "type": [
+              "string"
+            ],
+            "description": "The Land Registry transaction identifier, braces stripped",
+            "pattern": "^[0-9A-F-]{36}$",
+            "example": "5834E4E8-5F54-29C7-E063-4804A8C015BC"
+          },
+          "new_build": {
+            "type": [
+              "boolean"
+            ]
+          },
+          "price": {
+            "type": [
+              "integer"
+            ],
+            "description": "Price paid in whole pounds, as recorded",
+            "minimum": 0,
+            "example": 122000
+          },
+          "property": {
+            "$ref": "#/components/schemas/Property",
+            "description": "Omitted when the transaction is already nested inside its property"
+          },
+          "property_type": {
+            "$ref": "#/components/schemas/Code"
+          },
+          "real_price": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Price restated in the money of real_price_basis. Present only with real_terms=true, and null where the index cannot cover the sale"
+          },
+          "real_price_basis": {
+            "type": [
+              "string"
+            ],
+            "description": "The month real_price is expressed in, e.g. 2026-06",
+            "pattern": "^[0-9]{4}-[0-9]{2}$",
+            "example": "2026-06"
+          },
+          "tenure": {
+            "$ref": "#/components/schemas/Code"
+          },
+          "transfer_date": {
+            "type": [
+              "string"
+            ],
+            "format": "date",
+            "description": "Date of transfer",
+            "example": "2026-04-24"
+          }
+        },
+        "required": [
+          "id",
+          "price",
+          "transfer_date",
+          "property_type",
+          "tenure",
+          "category",
+          "new_build"
+        ]
+      },
+      "TransactionEnvelope": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Transaction"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TransactionList": {
+        "type": [
+          "object"
+        ],
+        "properties": {
+          "data": {
+            "type": [
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      }
+    }
+  }
+}

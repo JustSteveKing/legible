@@ -1,0 +1,97 @@
+# A small spec that every rule should pass. TestGoodSpecHasNoFindings runs the
+# whole ruleset over it, so a rule that starts flagging well-written specs
+# fails there rather than in someone's CI.
+openapi: 3.1.0
+info: { title: Kennel, version: "1.0" }
+security:
+  - bearerAuth: []
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      summary: List pets
+      description: >
+        Lists the pets in the kennel, newest arrivals first. Use it to find a
+        pet when you do not know its id.
+      parameters:
+        - name: limit
+          in: query
+          description: The most pets to return, from 1 to 100.
+          schema: { type: integer, minimum: 1, maximum: 100 }
+      responses:
+        "200":
+          description: A page of pets.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PetList" }
+              example:
+                data: [{ id: 7, name: Rex }]
+        "400": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createPet
+      description: >
+        Admits a new pet to the kennel and assigns it an id. Names need not be
+        unique.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NewPet" }
+            example: { name: Rex }
+      responses:
+        "201":
+          description: The admitted pet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Pet" }
+              example: { id: 7, name: Rex }
+        "422": { $ref: "#/components/responses/Problem" }
+  /pets/{petId}:
+    parameters:
+      - name: petId
+        in: path
+        required: true
+        description: The id the kennel assigned when the pet was admitted.
+        schema: { type: integer }
+    get:
+      operationId: getPet
+      description: >
+        Fetches one pet by id, including its name. Returns 404 when no pet has
+        that id.
+      responses:
+        "200":
+          description: The pet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Pet" }
+              example: { id: 7, name: Rex }
+        "404": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  responses:
+    Problem:
+      description: An RFC 9457 problem.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    NewPet:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, description: What the kennel calls the pet. }
+    Pet:
+      type: object
+      properties:
+        id: { type: integer, description: Assigned on admission. }
+        name: { type: string, description: What the kennel calls the pet. }
+    PetList:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Pet" } }
+    Problem:
+      type: object
+      properties:
+        title: { type: string }
+        detail: { type: string }

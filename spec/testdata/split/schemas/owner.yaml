@@ -1,0 +1,5 @@
+# A whole-file schema, and recursion that crosses files: Pet → Owner → Pet.
+type: object
+properties:
+  id: { type: integer }
+  pets: { type: array, items: { $ref: "pet.yaml#/Pet" } }

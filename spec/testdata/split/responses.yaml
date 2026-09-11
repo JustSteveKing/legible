@@ -1,0 +1,7 @@
+Problem:
+  description: failed
+  content:
+    application/problem+json:
+      schema:
+        type: object
+        properties: { detail: { type: string } }
