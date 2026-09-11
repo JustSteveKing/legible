@@ -6,12 +6,29 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-// version is stamped at build time with -ldflags "-X main.version=...".
+// version is stamped at build time with -ldflags "-X main.version=...", as
+// the release builds and the Makefile do.
 var version = "dev"
+
+// go install applies no ldflags, so a binary installed with
+// `go install github.com/JustSteveKing/legible/cmd/legible@v0.1.0` reported
+// "dev". The go command records the module version in the binary, so fall
+// back to that. Test binaries and plain local builds have none, or
+// "(devel)", and stay "dev".
+func init() {
+	if version != "dev" {
+		return
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = strings.TrimPrefix(info.Main.Version, "v")
+	}
+}
 
 // Exit codes. A gate failing and legible failing are different outcomes, and
 // CI needs to tell them apart: one means fix the spec, the other means fix

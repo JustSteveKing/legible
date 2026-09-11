@@ -8,8 +8,10 @@ PKG     := ./cmd/legible
 SPEC    ?= testdata/petstore.json
 
 # Stamped into main.version. Without it every binary reports "dev", which is
-# unhelpful the moment one of them is running in someone else's CI.
-VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+# unhelpful the moment one of them is running in someone else's CI. The
+# leading "v" is dropped so a local build reads like a release and a
+# `go install` build ("0.1.0", not "v0.1.0").
+VERSION := $(patsubst v%,%,$(shell git describe --tags --always --dirty 2>/dev/null || echo dev))
 LDFLAGS := -X main.version=$(VERSION)
 GO      ?= go
 
