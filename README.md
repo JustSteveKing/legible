@@ -60,6 +60,19 @@ go install github.com/JustSteveKing/legible/cmd/legible@latest
 **Pre-built binaries** for Linux, macOS and Windows, amd64 and arm64, are on
 the [releases page](https://github.com/JustSteveKing/legible/releases).
 
+### Tab completion
+
+```bash
+legible completion install
+```
+
+It works out your shell from `$SHELL` (or name it: `bash`, `zsh`, `fish`)
+and writes the script where that shell loads completions from, so there is
+nothing to source by hand. bash needs bash-completion installed. For zsh it
+checks the folder is on your `fpath` and prints the lines to add to
+`~/.zshrc` if not, or adds them with `--yes`. `legible completion uninstall`
+removes it.
+
 ## Use
 
 ```bash

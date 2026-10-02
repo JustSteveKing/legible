@@ -71,5 +71,6 @@ how to fix it, or 'legible explain' for the overview.`,
 		SilenceErrors: true,
 	}
 	root.AddCommand(newCheckCmd(), newRulesCmd(), newExplainCmd())
+	addCompletionInstall(root)
 	return root
 }
